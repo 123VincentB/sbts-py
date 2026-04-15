@@ -21,16 +21,10 @@ class Sbts:
     instrument: str | None = None
 
 
-def _is_empty_row(ws, row_idx: int) -> bool:
-    return all(ws.cell_type(row_idx, col) == XL_CELL_EMPTY
-               for col in range(ws.ncols))
-
-
 def _is_separator_row(ws, row_idx: int) -> bool:
-    if _is_empty_row(ws, row_idx):
+    if all(t == XL_CELL_EMPTY for t in ws.row_types(row_idx)):
         return True
-    v = ws.cell_value(row_idx, 0)
-    return isinstance(v, str) and v.strip() == ''
+    return ws.cell_type(row_idx, 0) == XL_CELL_TEXT and ws.cell_value(row_idx, 0).strip() == ''
 
 
 def _normalize_value(key: str, v: Any) -> Any:
@@ -39,7 +33,7 @@ def _normalize_value(key: str, v: Any) -> Any:
     if isinstance(v, float):
         if v in _NULL_NUMERIC:
             return None
-        if key.strip() == 'SVM' and v in _SVM_NULL:
+        if key == 'SVM' and v in _SVM_NULL:
             return None
     return v
 
@@ -61,23 +55,21 @@ def _parse_sheet(ws, col_idx: int) -> Sbts:
     diode_time_ms_list: list[float] = []
     diode_values_list: list[float] = []
 
-    in_spd = False
-    in_diode = False
+    mode: str | None = None  # None | 'spd' | 'diode'
 
     for row_idx in range(ws.nrows):
         if _is_separator_row(ws, row_idx):
-            in_spd = False
-            in_diode = False
+            mode = None
             continue
 
         cell_type_0 = ws.cell_type(row_idx, 0)
         col0_val = ws.cell_value(row_idx, 0)
 
         if cell_type_0 == XL_CELL_NUMBER:
-            if in_spd:
+            if mode == 'spd':
                 wavelengths.append(float(col0_val))
                 spd.append(float(ws.cell_value(row_idx, col_idx)))
-            elif in_diode:
+            elif mode == 'diode':
                 diode_time_ms_list.append(float(col0_val))
                 diode_values_list.append(float(ws.cell_value(row_idx, col_idx)))
             continue
@@ -87,18 +79,15 @@ def _parse_sheet(ws, col_idx: int) -> Sbts:
 
         key = col0_val.strip()
         if not key:
-            in_spd = False
-            in_diode = False
+            mode = None
             continue
 
         if key == 'wavelength /nm':
-            in_spd = True
-            in_diode = False
+            mode = 'spd'
             continue
 
         if key == 'time / ms':
-            in_diode = True
-            in_spd = False
+            mode = 'diode'
             continue
 
         val = ws.cell_value(row_idx, col_idx)
@@ -110,8 +99,8 @@ def _parse_sheet(ws, col_idx: int) -> Sbts:
         wavelengths=wavelengths,
         spd=spd,
         data=data,
-        diode_time_ms=diode_time_ms_list if diode_time_ms_list else None,
-        diode_values=diode_values_list if diode_values_list else None,
+        diode_time_ms=diode_time_ms_list or None,
+        diode_values=diode_values_list or None,
         instrument=instrument,
     )
 
@@ -128,10 +117,6 @@ def read(path: str | Path) -> list[Sbts]:
         FileNotFoundError: fichier introuvable
         ValueError: feuille 'Sheet3' absente ou fichier non parseable
     """
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Fichier introuvable : {path}")
-
     wb = xlrd.open_workbook(str(path))
 
     if 'Sheet3' not in wb.sheet_names():
