@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sbts-py"
+version = "1.0.0"
+description = "Parser for Gigahertz-Optik S-BTS2048 and S-BTS256 spectral data files"
+requires-python = ">=3.10"
+dependencies = ["xlrd>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
