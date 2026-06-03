@@ -105,6 +105,9 @@ def _parse_sheet(ws, col_idx: int) -> Sbts:
     )
 
 
+_CANDIDATE_SHEETS = ('Sheet3', 'Sheet1', 'Sheet2')
+
+
 def read(path: str | Path) -> list[Sbts]:
     """
     Parse un fichier .xls Gigahertz-Optik S-BTS2048 ou S-BTS256.
@@ -115,14 +118,18 @@ def read(path: str | Path) -> list[Sbts]:
 
     Raises:
         FileNotFoundError: fichier introuvable
-        ValueError: feuille 'Sheet3' absente ou fichier non parseable
+        ValueError: aucune feuille S-BTS reconnue ou fichier non parseable
     """
     wb = xlrd.open_workbook(str(path))
 
-    if 'Sheet3' not in wb.sheet_names():
-        raise ValueError(f"Feuille 'Sheet3' absente dans {path}")
+    sheet_name = next((n for n in _CANDIDATE_SHEETS if n in wb.sheet_names()), None)
+    if sheet_name is None:
+        raise ValueError(
+            f"Feuille S-BTS introuvable dans {path} "
+            f"(cherché : {_CANDIDATE_SHEETS}, trouvé : {wb.sheet_names()})"
+        )
 
-    ws = wb.sheet_by_name('Sheet3')
+    ws = wb.sheet_by_name(sheet_name)
     n_measures = ws.ncols - 1
 
     return [_parse_sheet(ws, col_idx) for col_idx in range(1, n_measures + 1)]

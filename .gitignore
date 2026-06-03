@@ -1,6 +1,7 @@
 # Contexte local — jamais sur GitHub
 CLAUDE.md
 CONTEXT*.md
+exports_sbts.md
 
 # Environnement Python
 .venv/
