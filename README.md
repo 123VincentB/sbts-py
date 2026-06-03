@@ -57,6 +57,10 @@ class Sbts:
 
 All missing or unavailable values (`-9999.0` convention) are normalized to `None`.
 
+## Compatibility
+
+The sheet name used by the Gigahertz-Optik export software has changed across versions (`Sheet3` in older versions, `Sheet1` in recent ones). `sbts-py` automatically tries `Sheet3`, then `Sheet1`, then `Sheet2`.
+
 ## License
 
 MIT
